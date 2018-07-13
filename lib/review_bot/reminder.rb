@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module ReviewBot
   GH = Github.new(oauth_token: ENV['GH_AUTH_TOKEN'])
 
@@ -20,31 +21,6 @@ module ReviewBot
       @app_reviewers ||= app_config['reviewers'].map { |r| Reviewer.new(r) }
     end
 
-    def out_reviewers
-      return @out_reviewers if defined?(@out_reviewers)
-      return @out_reviewers = [] unless bamboo_hr
-
-      @out_reviewers ||=
-        begin
-          whos_out_ids = bamboo_hr
-                         .whos_out(start_date: Date.today)
-                         .map { |t| t['employeeId'] }
-          app_reviewers.select { |r| whos_out_ids.include? r.bamboohr }
-        end
-    end
-
-    def bamboo_hr
-      return @bamboo_hr if defined?(@bamboo_hr)
-
-      @bamboo_hr ||=
-        if app_config['bamboohr_subdomain']
-          BambooHR.new(
-            api_key: ENV['BAMBOOHR_API_KEY'],
-            subdomain: app_config['bamboohr_subdomain']
-          )
-        end
-    end
-
     def notifications
       @notifications ||= potential_notifications.compact
     end
@@ -57,9 +33,14 @@ module ReviewBot
 
         next unless pull.needs_review?
 
+        requested_reviewers = pull.requested_reviewers.map(&:login)
+
+        reviewers_to_notify = app_reviewers
+                    .reject { |r| !requested_reviewers.include?(r.github) }
+
         Notification.new(
           pull_request: pull,
-          suggested_reviewers: pull.reviewers
+          suggested_reviewers: reviewers_to_notify
         )
       end
     end
