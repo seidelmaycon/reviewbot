@@ -57,25 +57,9 @@ module ReviewBot
 
         next unless pull.needs_review?
 
-        potential_reviewers = app_reviewers
-                              .reject { |r| r.github == pull.user.login }
-                              .reject { |r| out_reviewers.include? r }
-
-        person_hours_since_last_touch = potential_reviewers.map do |reviewer|
-          reviewer.work_hours_between(pull.last_touched_at, Time.now.utc)
-        end.reduce(0, :+)
-
-        next if person_hours_since_last_touch < app_config['hours_to_review']
-
-        suggested_reviewers = potential_reviewers.reject do |reviewer|
-          pull.reviewers.include?(reviewer['github'])
-        end
-
-        next if suggested_reviewers.select(&:work_hour?).empty?
-
         Notification.new(
           pull_request: pull,
-          suggested_reviewers: suggested_reviewers
+          suggested_reviewers: pull.reviewers
         )
       end
     end
