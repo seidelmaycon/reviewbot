@@ -14,7 +14,7 @@ module ReviewBot
     end
 
     def slack_emoji
-      "@#{slack}"
+      "<@#{slack}>"
     end
   end
 end
