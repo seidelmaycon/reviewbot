@@ -2,7 +2,7 @@
 module ReviewBot
   class HourOfDay
     # 8am to 5pm are work hours, so we only count the hour if it's inside that range
-    WORK_DAY_HOURS = 9..17
+    WORK_DAY_HOURS = 0..24
     # Monday through Friday
     DEFAULT_WORK_DAYS = 1..5
 
