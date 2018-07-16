@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ReviewBot
-  GH = Github.new(oauth_token: ENV['GH_AUTH_TOKEN'])
+  GH = Github.new(oauth_token: ENV['GH_AUTH_TOKEN']) 
 
   class Reminder
     attr_reader :owner, :repo, :app_config
@@ -36,7 +36,9 @@ module ReviewBot
         requested_reviewers = pull.requested_reviewers.map(&:login)
 
         reviewers_to_notify = app_reviewers
-                    .reject { |r| !requested_reviewers.include?(r.github) }
+                              .select do |r|
+                                requested_reviewers.include?(r.github)
+                              end
 
         Notification.new(
           pull_request: pull,

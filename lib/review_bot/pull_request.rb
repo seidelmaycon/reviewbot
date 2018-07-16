@@ -1,8 +1,9 @@
 # frozen_string_literal: true
+
 module ReviewBot
   class PullRequest < SimpleDelegator
     def needs_review?
-      labels.include?('ready-for-review')
+      !two_reviews_approved? && labels.include?('review')
     end
 
     def needs_first_review?
@@ -46,7 +47,6 @@ module ReviewBot
 
     private
 
-
     def review_in_progress?
       case reviewers.length
       when 0
@@ -60,8 +60,7 @@ module ReviewBot
 
     def last_touch
       @last_touch ||= reviews_from_other_humans
-                      .sort_by(&:created_at)
-                      .last
+                      .max_by(&:created_at)
     end
 
     def labels
@@ -76,12 +75,16 @@ module ReviewBot
       @reviews ||= PullRequestReview.for_pull_request(self)
     end
 
+    def two_reviews_approved?
+      reviews_from_humans.count >= 2
+    end
+
     def reviews_from_humans
       reviews.reject { |r| r.user.login.include?('-bot') }
     end
 
     def reviews_from_other_humans
-      reviews_from_humans.select { |r| r.user.login != user.login }
+      reviews_from_humans.reject { |r| r.user.login == user.login }
     end
 
     def approvals_count
