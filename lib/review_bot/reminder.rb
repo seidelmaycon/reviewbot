@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ReviewBot
-  GH = Github.new(oauth_token: ENV['GH_AUTH_TOKEN']) 
+  GH = Github.new(oauth_token: ENV['GH_AUTH_TOKEN'])
 
   class Reminder
     attr_reader :owner, :repo, :app_config
@@ -14,7 +14,7 @@ module ReviewBot
 
     def message
       return if notifications.empty?
-      notifications.map(&:message).join("\n")
+      notifications.select(&:notify_all).map(&:message).join("\n")
     end
 
     def app_reviewers
@@ -25,13 +25,17 @@ module ReviewBot
       @notifications ||= potential_notifications.compact
     end
 
+    def notify_direct
+      notifications.reject(&:notify_all)
+    end
+
     def potential_notifications
       GH.pulls.list(owner, repo).body.map do |p|
         pull = PullRequest.new(p)
 
         print '.'
 
-        next unless pull.needs_review?
+        next unless pull.ready_for_review?
 
         requested_reviewers = pull.requested_reviewers.map(&:login)
 
@@ -42,7 +46,8 @@ module ReviewBot
 
         Notification.new(
           pull_request: pull,
-          suggested_reviewers: reviewers_to_notify
+          suggested_reviewers: reviewers_to_notify,
+          notify_all: !pull.min_reviews_approved?
         )
       end
     end

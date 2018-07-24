@@ -2,12 +2,12 @@
 
 module ReviewBot
   class PullRequest < SimpleDelegator
-    def needs_review?
-      !two_reviews_approved? && labels.include?('review')
+    def ready_for_review?
+      labels.include?('review')
     end
 
-    def needs_first_review?
-      needs_review?
+    def min_reviews_approved?
+      reviews_from_humans.count >= ENV['MIN_REVIEWS_COUNT'].try(:to_i)
     end
 
     def reviewers
@@ -39,7 +39,7 @@ module ReviewBot
           "blocked: #{blocked?}",
           "last touched: #{last_touched_at}",
           "review_in_progress: #{review_in_progress?}",
-          "needs_review: #{needs_review?}",
+          "needs_review: #{ready_for_review?}",
           "url: #{html_url}"
         ].join(', ') +
         ' )'
@@ -73,10 +73,6 @@ module ReviewBot
 
     def reviews
       @reviews ||= PullRequestReview.for_pull_request(self)
-    end
-
-    def two_reviews_approved?
-      reviews_from_humans.count >= 2
     end
 
     def reviews_from_humans

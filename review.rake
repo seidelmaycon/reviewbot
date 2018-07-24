@@ -24,11 +24,21 @@ task :remind, [:mode] do |_t, args|
 
     ReviewBot::HourOfDay.work_days = app_config['work_days']
 
-    message = ReviewBot::Reminder.new(owner, repo, app_config).message
+    reminder = ReviewBot::Reminder.new(owner, repo, app_config)
 
-    next if message.nil?
+    message_to_group = reminder.message
+
+    direct_notifications = reminder.notify_direct
+
+    next if message_to_group.nil?
 
     client = Slack::Web::Client.new
-    client.chat_postMessage(channel: room, text: message, as_user: true)
+    client.chat_postMessage(channel: room, text: message_to_group, as_user: true) unless message_to_group.blank?
+
+    direct_notifications.each do |notification|
+      notification.suggested_reviewers.each do |reviewer|
+        client.chat_postMessage(channel: reviewer.slack, text: notification.message, as_user: true)
+      end
+    end
   end
 end
